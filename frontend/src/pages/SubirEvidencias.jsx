@@ -358,7 +358,7 @@ export default function SubirEvidencias() {
 
             {/* Header */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h3 className="text-xl font-bold text-[#0B2B54]">CU07: Portal de Evidencias</h3>
+                <h3 className="text-xl font-bold text-[#0B2B54]">Portal de Evidencias</h3>
                 <p className="text-sm text-gray-500 mt-1">Entrega tus evidencias de actividades de tutoría</p>
 
                 {/* Resumen */}

@@ -11,5 +11,7 @@ router.get('/tutorados', usuarioController.listarTutorados);
 router.get('/', usuarioController.listarUsuarios);
 router.get('/:id', usuarioController.obtenerUsuario);
 router.patch('/:id/estado', usuarioController.cambiarEstadoUsuario);
+router.put('/:id', protect, usuarioController.actualizarUsuario);
+router.delete('/:id', protect, usuarioController.eliminarUsuario);
 
 module.exports = router;

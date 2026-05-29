@@ -104,6 +104,43 @@ const registrarUsuario = async (req, res, next) => {
       });
     }
 
+    // ── Validaciones específicas de rol antes de crear el usuario ──
+    if (rol === 'Tutor') {
+      if (!num_control_tutor || !carrera) {
+        return res.status(400).json({ success: false, message: 'Para el rol tutor se requieren: num_control_tutor, carrera.' });
+      }
+      if (!/^\d{8}$/.test(num_control_tutor)) {
+        return res.status(400).json({ success: false, message: 'El número de control del tutor debe tener exactamente 8 números.' });
+      }
+      
+      const { data: tutorExistente } = await supabase
+        .from('tutores')
+        .select('usuario_id')
+        .eq('num_control_tutor', num_control_tutor)
+        .single();
+        
+      if (tutorExistente) {
+        return res.status(400).json({ success: false, message: 'El número de control del tutor ya está registrado en el sistema.' });
+      }
+    } else if (rol === 'Tutorado') {
+      if (!num_control_tutorado) {
+        return res.status(400).json({ success: false, message: 'Para el rol tutorado se requiere: num_control_tutorado.' });
+      }
+      if (!/^\d{8}$/.test(num_control_tutorado)) {
+        return res.status(400).json({ success: false, message: 'El número de control del tutorado debe tener exactamente 8 números.' });
+      }
+
+      const { data: tutoradoExistente } = await supabase
+        .from('tutorados')
+        .select('usuario_id')
+        .eq('num_control_tutorado', num_control_tutorado)
+        .single();
+        
+      if (tutoradoExistente) {
+        return res.status(400).json({ success: false, message: 'El número de control del tutorado ya está registrado en el sistema.' });
+      }
+    }
+
     // Hashear contraseña por defecto
     const hashedPassword = await bcrypt.hash('123456', 12);
 
@@ -127,15 +164,6 @@ const registrarUsuario = async (req, res, next) => {
 
     // Insertar en tabla específica según rol
     if (rol === 'Tutor') {
-      if (!num_control_tutor || !carrera) {
-        // Rollback manual (eliminar usuario si falla)
-        await supabase.from('usuarios').delete().eq('id', usuarioData.id);
-        return res.status(400).json({
-          success: false,
-          message: 'Para el rol tutor se requieren: num_control_tutor, carrera.',
-        });
-      }
-      
       const { error: tutorError } = await supabase
         .from('tutores')
         .insert([{
@@ -150,14 +178,6 @@ const registrarUsuario = async (req, res, next) => {
         return res.status(400).json({ success: false, message: tutorError.message });
       }
     } else if (rol === 'Tutorado') {
-      if (!num_control_tutorado) {
-        await supabase.from('usuarios').delete().eq('id', usuarioData.id);
-        return res.status(400).json({
-          success: false,
-          message: 'Para el rol tutorado se requiere: num_control_tutorado.',
-        });
-      }
-
       const { error: tutoradoError } = await supabase
         .from('tutorados')
         .insert([{
@@ -382,7 +402,7 @@ const listarUsuarios = async (req, res, next) => {
     
     let query = supabase
       .from('usuarios')
-      .select('id, nombre_completo, correo, rol, activo, departamento_id');
+      .select('id, nombre_completo, correo, rol, activo, departamento_id, tutores(num_control_tutor, carrera, max_tutorados), tutorados(num_control_tutorado, direccion)');
 
     if (rol) {
       const lowercase = rol.toLowerCase();
@@ -503,6 +523,72 @@ const listarTutorados = async (req, res, next) => {
   }
 };
 
+// ── Actualizar usuario ───────────────────────────────────────────
+const actualizarUsuario = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { nombre_completo, correo, num_control_tutor, carrera, max_tutorados, num_control_tutorado, direccion } = req.body;
+
+    const { data: usuario, error: errorUsuario } = await supabase
+      .from('usuarios')
+      .select('rol')
+      .eq('id', id)
+      .single();
+
+    if (errorUsuario || !usuario) return res.status(404).json({ success: false, message: 'Usuario no encontrado.' });
+
+    const updates = {};
+    if (nombre_completo) updates.nombre_completo = nombre_completo;
+    if (correo) updates.correo = correo;
+
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('usuarios').update(updates).eq('id', id);
+    }
+
+    if (usuario.rol === 'Tutor') {
+      const tutorUpdates = {};
+      if (num_control_tutor) tutorUpdates.num_control_tutor = num_control_tutor;
+      if (carrera) tutorUpdates.carrera = carrera;
+      if (max_tutorados) tutorUpdates.max_tutorados = max_tutorados;
+      
+      if (Object.keys(tutorUpdates).length > 0) {
+        await supabase.from('tutores').update(tutorUpdates).eq('usuario_id', id);
+      }
+    } else if (usuario.rol === 'Tutorado') {
+      const tutoradoUpdates = {};
+      if (num_control_tutorado) tutoradoUpdates.num_control_tutorado = num_control_tutorado;
+      if (direccion !== undefined) tutoradoUpdates.direccion = direccion;
+
+      if (Object.keys(tutoradoUpdates).length > 0) {
+        await supabase.from('tutorados').update(tutoradoUpdates).eq('usuario_id', id);
+      }
+    }
+
+    res.status(200).json({ success: true, message: 'Usuario actualizado correctamente.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Eliminar usuario ─────────────────────────────────────────────
+const eliminarUsuario = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    
+    // Hard delete
+    await supabase.from('tutores').delete().eq('usuario_id', id);
+    await supabase.from('tutorados').delete().eq('usuario_id', id);
+    
+    const { error } = await supabase.from('usuarios').delete().eq('id', id);
+
+    if (error) return res.status(400).json({ success: false, message: error.message });
+
+    res.status(200).json({ success: true, message: 'Usuario eliminado correctamente.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   registrarUsuario,
   consultarTutoresPorCarrera,
@@ -511,5 +597,7 @@ module.exports = {
   listarUsuarios,
   obtenerUsuario,
   cambiarEstadoUsuario,
+  actualizarUsuario,
+  eliminarUsuario,
 };
 

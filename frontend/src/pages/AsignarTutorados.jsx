@@ -202,7 +202,7 @@ export default function AsignarTutorados() {
 
             {/* ── Stepper ───────────────────────────────────────── */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
-                <h3 className="text-xl font-bold text-[#0B2B54] mb-6">CU04: Asignar Tutorados a los Tutores</h3>
+                <h3 className="text-xl font-bold text-[#0B2B54] mb-6">Asignar Tutorados a los Tutores</h3>
                 <div className="flex items-center gap-4 mb-8">
                     {PASOS.map((p, idx) => {
                         const Icon = p.icon;
@@ -260,8 +260,14 @@ export default function AsignarTutorados() {
                             <input
                                 type="text" required
                                 placeholder="Ej. 21410001"
+                                maxLength={8}
+                                pattern="\d{8}"
+                                title="Debe contener exactamente 8 números"
                                 value={alumnoData.num_control_tutorado}
-                                onChange={e => setAlumnoData({ ...alumnoData, num_control_tutorado: e.target.value })}
+                                onChange={e => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    if (val.length <= 8) setAlumnoData({ ...alumnoData, num_control_tutorado: val });
+                                }}
                                 className="w-full border border-gray-300 p-2.5 rounded-lg outline-none focus:ring-2 focus:ring-[#0B2B54] text-sm"
                             />
                         </div>

@@ -131,7 +131,7 @@ export default function AsignarTutores() {
         <div className="max-w-4xl mx-auto pb-10">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-[#0B2B54]">CU03: Asignar a los Tutores</h3>
+                    <h3 className="text-xl font-bold text-[#0B2B54]">Asignar a los Tutores</h3>
                     <button
                         onClick={() => setMostrarNuevoGrupo(!mostrarNuevoGrupo)}
                         className="flex items-center gap-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors"
@@ -212,7 +212,7 @@ export default function AsignarTutores() {
                     </div>
                 )}
 
-                {/* Formulario Principal: CU03 Asignar Tutor */}
+                {/* Formulario Principal: Asignar Tutor */}
                 {planSeleccionado && (
                     <form onSubmit={handleAsignarTutor} className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6 border-t pt-6">
 

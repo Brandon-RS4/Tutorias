@@ -250,7 +250,7 @@ export default function CapturarAsistencias() {
             {/* ── Header con tabs ────────────────────────────────── */}
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                 <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-[#0B2B54]">CU05: Capturar Asistencias</h3>
+                    <h3 className="text-xl font-bold text-[#0B2B54]">Capturar Asistencias</h3>
                     <button
                         onClick={() => setVista(vista === 'nueva' ? 'lista' : 'nueva')}
                         className="flex items-center gap-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors"

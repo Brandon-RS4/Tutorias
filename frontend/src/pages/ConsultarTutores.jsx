@@ -150,7 +150,7 @@ export default function ConsultarTutores() {
             <div className="max-w-6xl mx-auto pb-10 space-y-6">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h3 className="text-xl font-bold text-[#0B2B54]">CU11: Consultar Tutores por Carrera</h3>
+                        <h3 className="text-xl font-bold text-[#0B2B54]">Consultar Tutores por Carrera</h3>
                         <p className="text-sm text-gray-500 mt-1">Supervisa el desempeño y expediente de los tutores asignados.</p>
                     </div>
                     <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">

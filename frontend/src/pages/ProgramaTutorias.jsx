@@ -145,7 +145,7 @@ export default function ProgramaTutorias() {
         <div className="max-w-4xl mx-auto pb-10">
             <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-[#0B2B54]">CU02: Asignar Actividades del Programa</h3>
+                    <h3 className="text-xl font-bold text-[#0B2B54]">Asignar Actividades del Programa</h3>
                     <button 
                         onClick={() => setMostrarNuevoPlan(!mostrarNuevoPlan)}
                         className="flex items-center gap-2 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg transition-colors"
@@ -183,7 +183,7 @@ export default function ProgramaTutorias() {
                     </div>
                 )}
 
-                {/* Formulario Principal: CU02 Asignar Actividades */}
+                {/* Formulario Principal: Asignar Actividades */}
                 <form onSubmit={handleCrearActividad} className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-1 md:col-span-2">
                         <label className="text-sm font-medium text-gray-700">Seleccionar Periodo (Plan Activo)</label>

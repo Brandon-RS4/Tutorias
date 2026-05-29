@@ -249,7 +249,7 @@ export default function EvaluarEvidencias() {
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h3 className="text-xl font-bold text-[#0B2B54]">CU06: Gestión de Evidencias</h3>
+                            <h3 className="text-xl font-bold text-[#0B2B54]">Gestión de Evidencias</h3>
                             <p className="text-sm text-gray-500 mt-1">Revisa y evalúa las evidencias entregadas por tus tutorados</p>
                         </div>
                         <button

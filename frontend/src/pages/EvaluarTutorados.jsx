@@ -243,7 +243,7 @@ export default function EvaluarTutorados() {
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h3 className="text-xl font-bold text-[#0B2B54]">CU08: Evaluar Tutorados</h3>
+                            <h3 className="text-xl font-bold text-[#0B2B54]">Evaluar Tutorados</h3>
                             <p className="text-sm text-gray-500 mt-1">Registra la evaluación final del ciclo para cada alumno de tu grupo</p>
                         </div>
                         <button onClick={cargar}
@@ -359,7 +359,7 @@ export default function EvaluarTutorados() {
                             Este tutorado tiene <strong>{seleccionado.evidencias_pendientes} evidencia{seleccionado.evidencias_pendientes > 1 ? 's' : ''} sin evaluar</strong>.
                             El sistema requiere que el <strong>100% de las evidencias estén evaluadas</strong> antes de registrar la calificación final.
                         </p>
-                        <p className="text-xs text-red-500 mt-1.5">Ve a <strong>Evaluar Evidencias (CU06)</strong> y evalúa todas las evidencias de este alumno primero.</p>
+                        <p className="text-xs text-red-500 mt-1.5">Ve a <strong>Evaluar Evidencias</strong> y evalúa todas las evidencias de este alumno primero.</p>
                     </div>
                 )}
             </div>

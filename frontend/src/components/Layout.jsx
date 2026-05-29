@@ -58,6 +58,7 @@ export default function Layout() {
                     { name: 'Panel de Control', path: '/dashboard', icon: Home },
                     { name: 'Gestión de Usuarios', path: '/usuarios', icon: Users },
                     { name: 'Programa de Tutorías', path: '/programa-tutorias', icon: Calendar },
+                    { name: 'Asignar Tutores', path: '/asignar-tutores', icon: Users },
                     { name: 'Generar Constancias', path: '/constancias', icon: FileText },
                     { name: 'Consultar Tutores', path: '/consultar-tutores', icon: Users },
                     { name: 'Consultar Tutorados', path: '/consultar-tutorados', icon: Users },
@@ -69,7 +70,6 @@ export default function Layout() {
                     { name: 'Gestión de Usuarios', path: '/usuarios', icon: Users },
                     { name: 'Asignar Tutorados', path: '/asignar-tutorados', icon: Users },
                     { name: 'Consultar Tutores', path: '/consultar-tutores', icon: Users },
-                    { name: 'Consultar Tutorados', path: '/consultar-tutorados', icon: Users },
                 ];
 
             case 'jefe_departamento_desarrollo_academico': // Jefe de Desarrollo Académico

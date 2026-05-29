@@ -337,7 +337,7 @@ function FormularioEdicion({ sesion, actividad, onGuardar, onVolver, enviando })
 }
 
 // ══════════════════════════════════════════════════════════════
-//  Componente principal – CU09
+//  Componente principal
 // ══════════════════════════════════════════════════════════════
 export default function ModificarActividades() {
     const { user } = useAuth();
@@ -486,7 +486,7 @@ export default function ModificarActividades() {
                                 </>
                             )}
                         </div>
-                        <h3 className="text-xl font-bold text-[#0B2B54]">CU09: Modificar Actividades</h3>
+                        <h3 className="text-xl font-bold text-[#0B2B54]">Modificar Actividades</h3>
                         <p className="text-sm text-gray-500 mt-0.5">
                             {vista === 'sesiones'    && 'Selecciona una sesión para ver sus actividades'}
                             {vista === 'actividades' && 'Selecciona la actividad que deseas modificar'}

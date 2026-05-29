@@ -32,7 +32,7 @@ export default function ConsultarTutorados() {
     const cargarTutores = useCallback(async () => {
         setCargandoTutores(true);
         try {
-            // Obtenemos todos los tutores sin filtro de carrera para CU12
+            // Obtenemos todos los tutores sin filtro de carrera
             const res = await api.get(`/usuarios/tutores`);
             setTutores(res.data.data.tutores || []);
         } catch (err) {
@@ -150,7 +150,7 @@ export default function ConsultarTutorados() {
             <div className="max-w-6xl mx-auto pb-10 space-y-6">
                 <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                        <h3 className="text-xl font-bold text-[#0B2B54]">CU12: Consultar Tutorados por Tutor</h3>
+                        <h3 className="text-xl font-bold text-[#0B2B54]">Consultar Tutorados por Tutor</h3>
                         <p className="text-sm text-gray-500 mt-1">Selecciona un tutor para ver el avance y seguimiento de sus alumnos.</p>
                     </div>
                     <div className="flex items-center gap-3 w-full md:w-auto">
