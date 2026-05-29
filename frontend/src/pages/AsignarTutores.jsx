@@ -39,12 +39,12 @@ export default function AsignarTutores() {
             const planesData = resPlanes.data.data.planes;
             setPlanes(planesData);
 
-            if (planesData.length > 0 && !planSeleccionado) {
-                setPlanSeleccionado(planesData[0]._id);
+            if (planesData.length > 0) {
+                setPlanSeleccionado(planesData[0].id);
             }
 
-            const resTutores = await api.get('/usuarios?rol=tutor&activo=true');
-            setTutores(resTutores.data.data.usuarios);
+            const resTutores = await api.get('/usuarios/tutores');
+            setTutores(resTutores.data.data.tutores);
 
         } catch (err) {
             console.error('Error al cargar datos:', err);
@@ -54,7 +54,7 @@ export default function AsignarTutores() {
     const cargarGrupos = async () => {
         if (!planSeleccionado) return;
         try {
-            const resGrupos = await api.get(`/tutorias/grupos?plan_tutoria=${planSeleccionado}`);
+            const resGrupos = await api.get(`/tutorias/grupos?plan_tutoria_id=${planSeleccionado}`);
             setGrupos(resGrupos.data.data.grupos);
         } catch (err) {
             console.error('Error al cargar grupos:', err);
@@ -79,7 +79,7 @@ export default function AsignarTutores() {
             const payload = {
                 clave_grupo: grupoData.clave_grupo,
                 horario: horarioArmado,
-                plan_tutoria: planSeleccionado
+                plan_tutoria_id: planSeleccionado
             };
             const res = await api.post('/tutorias/grupos', payload);
 
@@ -106,7 +106,7 @@ export default function AsignarTutores() {
     const handleAsignarTutor = async (e) => {
         e.preventDefault();
         try {
-            const res = await api.post('/usuarios/tutores/asignar', asignacionData);
+            const res = await api.post('/tutorias/tutores/asignar', asignacionData);
 
             Swal.fire({
                 title: '¡Tutor Asignado!',
@@ -152,7 +152,7 @@ export default function AsignarTutores() {
                     >
                         <option value="" disabled>Selecciona un plan vigente</option>
                         {planes.map(plan => (
-                            <option key={plan._id} value={plan._id}>
+                            <option key={plan.id} value={plan.id}>
                                 {plan.nombre} ({plan.semestre})
                             </option>
                         ))}
@@ -243,7 +243,7 @@ export default function AsignarTutores() {
                             >
                                 <option value="" disabled>Grupos / Espacios disponibles</option>
                                 {grupos.map(grupo => (
-                                    <option key={grupo._id} value={grupo._id} disabled={grupo.tutor}>
+                                    <option key={grupo.id} value={grupo.id} disabled={grupo.tutor}>
                                         {grupo.clave_grupo} - Horario: {grupo.horario} {grupo.tutor ? '(Ya tiene tutor asignado)' : '(Disponible)'}
                                     </option>
                                 ))}
@@ -285,7 +285,7 @@ export default function AsignarTutores() {
                             </thead>
                             <tbody>
                                 {grupos.map(grupo => (
-                                    <tr key={grupo._id} className="bg-white border-b">
+                                    <tr key={grupo.id} className="bg-white border-b">
                                         <td className="px-6 py-4 font-medium text-gray-900">{grupo.clave_grupo}</td>
                                         <td className="px-6 py-4">{grupo.horario}</td>
                                         <td className="px-6 py-4">

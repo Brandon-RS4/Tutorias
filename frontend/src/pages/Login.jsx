@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Eye, EyeOff } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 export default function Login() {
     const [correo, setCorreo] = useState('');
     const [contrasena, setContrasena] = useState('');
+    const [mostrarContrasena, setMostrarContrasena] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const { login } = useAuth();
@@ -18,7 +20,11 @@ export default function Login() {
         const result = await login(correo, contrasena);
 
         if (result.success) {
-            navigate('/dashboard');
+            if (result.primer_inicio_sesion) {
+                navigate('/cambiar-contrasena-inicial');
+            } else {
+                navigate('/dashboard');
+            }
         } else {
             Swal.fire({
                 title: 'Acceso Denegado',
@@ -49,7 +55,7 @@ export default function Login() {
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0B2B54] focus:border-[#0B2B54] outline-none transition-colors"
                             value={correo}
                             onChange={(e) => setCorreo(e.target.value)}
-                            placeholder="usuario@tecnm.mx"
+                            placeholder="usuario@culiacan.tecnm.mx"
                         />
                     </div>
 
@@ -57,14 +63,23 @@ export default function Login() {
                         <label className="block text-sm font-medium text-gray-700 mb-1">
                             Contraseña
                         </label>
-                        <input
-                            type="password"
-                            required
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0B2B54] focus:border-[#0B2B54] outline-none transition-colors"
-                            value={contrasena}
-                            onChange={(e) => setContrasena(e.target.value)}
-                            placeholder="••••••••"
-                        />
+                        <div className="relative">
+                            <input
+                                type={mostrarContrasena ? "text" : "password"}
+                                required
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#0B2B54] focus:border-[#0B2B54] outline-none transition-colors pr-10"
+                                value={contrasena}
+                                onChange={(e) => setContrasena(e.target.value)}
+                                placeholder="••••••••"
+                            />
+                            <button
+                                type="button"
+                                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                                onClick={() => setMostrarContrasena(!mostrarContrasena)}
+                            >
+                                {mostrarContrasena ? <EyeOff size={20} /> : <Eye size={20} />}
+                            </button>
+                        </div>
                     </div>
 
                     <button

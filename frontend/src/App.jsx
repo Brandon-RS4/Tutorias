@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Usuarios from './pages/Usuarios';
+import CambiarContrasenaInicial from './pages/CambiarContrasenaInicial';
 
 // Componente para proteger rutas
 const ProtectedRoute = ({ children }) => {
@@ -24,14 +25,16 @@ const PlaceholderDashboard = () => (
 
 import ProgramaTutorias from './pages/ProgramaTutorias';
 import AsignarTutores from './pages/AsignarTutores';
+import AsignarTutorados from './pages/AsignarTutorados';
+import CapturarAsistencias from './pages/CapturarAsistencias';
+import EvaluarEvidencias from './pages/EvaluarEvidencias';
+import SubirEvidencias from './pages/SubirEvidencias';
+import EvaluarTutorados from './pages/EvaluarTutorados';
+import ModificarActividades from './pages/ModificarActividades';
 
-// Componente temporal para Constancias
-const PlaceholderConstancias = () => (
-  <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
-    <h3 className="text-xl font-medium text-gray-800 mb-4">Generación de Constancias</h3>
-    <p className="text-gray-600">Este módulo está en construcción. Aquí podrás generar las constancias para los tutores y tutorados.</p>
-  </div>
-);
+import Constancias from './pages/Constancias';
+import ConsultarTutores from './pages/ConsultarTutores';
+import ConsultarTutorados from './pages/ConsultarTutorados';
 
 // Componente genérico para vistas en construcción
 const PlaceholderView = ({ title }) => (
@@ -45,25 +48,26 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/cambiar-contrasena-inicial" element={<CambiarContrasenaInicial />} />
 
       {/* Rutas Protegidas */}
       <Route path="/" element={<ProtectedRoute><Layout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<PlaceholderDashboard />} />
         <Route path="usuarios" element={<Usuarios />} />
-        <Route path="constancias" element={<PlaceholderConstancias />} />
+        <Route path="constancias" element={<Constancias />} />
         
         {/* Rutas en construcción mapeadas a los Casos de Uso */}
-        <Route path="consultar-tutores" element={<PlaceholderView title="Consultar Tutores (CU11)" />} />
-        <Route path="consultar-tutorados" element={<PlaceholderView title="Consultar Tutorados (CU12)" />} />
+        <Route path="consultar-tutores" element={<ConsultarTutores />} />
+        <Route path="consultar-tutorados" element={<ConsultarTutorados />} />
         <Route path="asignar-tutores" element={<AsignarTutores />} />
         <Route path="programa-tutorias" element={<ProgramaTutorias />} />
-        <Route path="asignar-tutorados" element={<PlaceholderView title="Asignar Tutorados (CU04)" />} />
-        <Route path="asistencias" element={<PlaceholderView title="Capturar Asistencias (CU05)" />} />
-        <Route path="evaluaciones" element={<PlaceholderView title="Evaluar Evidencias (CU06)" />} />
-        <Route path="evaluar-tutorados" element={<PlaceholderView title="Evaluar Tutorados (CU08)" />} />
-        <Route path="actividades" element={<PlaceholderView title="Modificar Actividades (CU09)" />} />
-        <Route path="evidencias" element={<PlaceholderView title="Subir Evidencias (CU07)" />} />
+        <Route path="asignar-tutorados" element={<AsignarTutorados />} />
+        <Route path="asistencias" element={<CapturarAsistencias />} />
+        <Route path="evaluaciones" element={<EvaluarEvidencias />} />
+        <Route path="evaluar-tutorados" element={<EvaluarTutorados />} />
+        <Route path="actividades" element={<ModificarActividades />} />
+        <Route path="evidencias" element={<SubirEvidencias />} />
       </Route>
 
       {/* Ruta comodín para atrapar errores de URL */}

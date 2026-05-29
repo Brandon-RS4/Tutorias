@@ -6,18 +6,20 @@
  * ─────────────────────────────────────────────────────────────────
  */
 
-const jwt     = require('jsonwebtoken');
-const { Usuario } = require('../models');
+const jwt = require('jsonwebtoken');
+const { supabase } = require('../config/supabase');
 
-// ── Roles válidos del sistema (deben coincidir con discriminatorKey) ──
+// ── Roles válidos del sistema ──
 const ROLES = {
-  DIRECTOR             : 'director',
-  SUBDIRECTOR          : 'subdirector',
-  JEFE_DEPTO           : 'jefe_depto_academico',
-  COORDINADOR_PT       : 'coordinador_pt',
-  COORDINADOR_DEP      : 'coordinador_dep_ac_pt',
-  TUTOR                : 'tutor',
-  TUTORADO             : 'tutorado',
+  ADMINISTRADOR: 'Administrador',
+  DIRECTOR: 'Director',
+  SUBDIRECTOR: 'Subdirector',
+  TUTOR: 'Tutor',
+  TUTORADO: 'Tutorado',
+  JEFE_DEPARTAMENTO_ACADEMICO: 'Jefe_Departamento_Academico',
+  COORDINADOR_INSTITUCIONAL_PT: 'Coordinador_Institucional_PT',
+  COORDINADOR_DEPARTAMENTO_ACADEMICO: 'Coordinador_Departamento_Academico',
+  JEFE_DEPARTAMENTO_DESARROLLO_ACADEMICO: 'Jefe_Departamento_Desarrollo_Academico'
 };
 
 /**
@@ -39,10 +41,14 @@ const protect = async (req, res, next) => {
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // Recupera el usuario fresco desde BD (incluye contrasena: false por defecto)
-    const usuario = await Usuario.findById(decoded.id).select('-contrasena');
+    // Recupera el usuario fresco desde BD
+    const { data: usuario, error } = await supabase
+      .from('usuarios')
+      .select('id, nombre_completo, correo, rol, activo, departamento_id')
+      .eq('id', decoded.id)
+      .single();
 
-    if (!usuario) {
+    if (error || !usuario) {
       return res.status(401).json({
         success: false,
         message: 'El usuario del token ya no existe.',
@@ -71,10 +77,14 @@ const protect = async (req, res, next) => {
 /**
  * authorize(...roles)
  * Middleware factory que acepta uno o varios roles permitidos.
- * Uso: router.get('/ruta', protect, authorize('director', 'subdirector'), handler)
+ * Uso: router.get('/ruta', protect, authorize('Director', 'Subdirector'), handler)
  */
 const authorize = (...rolesPermitidos) => {
   return (req, res, next) => {
+    if (req.usuario.rol === 'Administrador') {
+      return next(); // El administrador tiene acceso a todo
+    }
+
     if (!rolesPermitidos.includes(req.usuario.rol)) {
       return res.status(403).json({
         success: false,

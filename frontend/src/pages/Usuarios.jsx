@@ -5,11 +5,39 @@ import Swal from 'sweetalert2';
 
 export default function Usuarios() {
     const { user } = useAuth();
+
+    const getRolesPermitidos = () => {
+        const rolActual = user?.rol;
+        
+        const allRoles = [
+            { value: 'jefe_departamento_desarrollo_academico', label: 'Jefe del Departamento de Desarrollo Académico' },
+            { value: 'tutorado', label: 'Tutorado' },
+            { value: 'tutor', label: 'Tutor' },
+            { value: 'coordinador_institucional_pt', label: 'Coordinador PT (Institucional)' },
+            { value: 'coordinador_departamento_academico', label: 'Coordinador Departamento Académico' },
+            { value: 'jefe_departamento_academico', label: 'Jefe del Departamento Académico' },
+            { value: 'subdirector', label: 'Subdirector' },
+            { value: 'director', label: 'Director' }
+        ];
+
+        if (rolActual === 'Administrador' || rolActual === 'Director' || rolActual === 'Jefe_Departamento_Desarrollo_Academico') {
+            return allRoles;
+        } else if (rolActual === 'Coordinador_Institucional_PT') {
+            return [ { value: 'tutor', label: 'Tutor' } ];
+        } else if (rolActual === 'Coordinador_Departamento_Academico') {
+            return [ { value: 'tutorado', label: 'Tutorado' } ];
+        }
+        return [];
+    };
+
+    const rolesPermitidos = getRolesPermitidos();
+    const defaultRol = rolesPermitidos.length > 0 ? rolesPermitidos[0].value : '';
+
     const [formData, setFormData] = useState({
         nombre_completo: '',
         correo: '',
         contrasena: '123456', // Contraseña genérica por defecto
-        rol: 'tutorado',
+        rol: defaultRol,
         activo: true,
         // Campos específicos de tutor
         num_control_tutor: '',
@@ -26,7 +54,7 @@ export default function Usuarios() {
             // Se manda el departamento del usuario que está creando la cuenta
             const payload = {
                 ...formData,
-                departamento: user?.departamento?._id || user?.departamento
+                departamento_id: user?.departamento_id || null
             };
 
             // El endpoint en el backend está mapeado a POST /api/usuarios/
@@ -43,7 +71,7 @@ export default function Usuarios() {
                 nombre_completo: '', 
                 correo: '', 
                 contrasena: '123456', 
-                rol: 'tutorado',
+                rol: defaultRol,
                 activo: true,
                 num_control_tutor: '',
                 carrera: '',
@@ -99,13 +127,9 @@ export default function Usuarios() {
                             value={formData.rol}
                             onChange={e => setFormData({ ...formData, rol: e.target.value })}
                         >
-                            <option value="tutorado">Tutorado</option>
-                            <option value="tutor">Tutor</option>
-                            <option value="coordinador_pt">Coordinador PT (Institucional)</option>
-                            <option value="coordinador_dep_ac_pt">Coordinador Departamento Académico</option>
-                            <option value="jefe_depto_academico">Jefe del Departamento Académico</option>
-                            <option value="subdirector">Subdirector</option>
-                            <option value="director">Director / Jefe de Desarrollo Académico</option>
+                            {rolesPermitidos.map(r => (
+                                <option key={r.value} value={r.value}>{r.label}</option>
+                            ))}
                         </select>
                     </div>
 
@@ -146,9 +170,14 @@ export default function Usuarios() {
                                 >
                                     <option value="" disabled>Seleccione una carrera</option>
                                     <option value="Ing. Sistemas Computacionales">Ing. Sistemas Computacionales</option>
-                                    <option value="Ing. Industrial">Ing. Industrial</option>
-                                    <option value="Ing. Mecatrónica">Ing. Mecatrónica</option>
-                                    <option value="Lic. Administración">Lic. Administración</option>
+                                    <option value="Ing. Electrónica">Ing. Electrónica</option>
+                                    <option value="Ing. Eléctrica">Ing. Eléctrica</option>
+                                    <option value="Ing. TICS">Ing. TICS</option>
+                                    <option value="Ing. Bioquímica">Ing. Bioquímica</option>
+                                    <option value="Ing. Mecánica">Ing. Mecánica</option>
+                                    <option value="Ing. Ambiental">Ing. Ambiental</option>
+                                    <option value="Ing. Energías Renovables">Ing. Energías Renovables</option>
+                                    <option value="Ing. Gestión Empresarial">Ing. Gestión Empresarial</option>
                                 </select>
                             </div>
                             <div className="space-y-1">

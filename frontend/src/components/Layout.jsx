@@ -19,7 +19,7 @@ export default function Layout() {
         const rol = user.rol?.toLowerCase();
 
         switch (rol) {
-            case 'director':
+            case 'administrador':
                 return [
                     { name: 'Panel de Control', path: '/dashboard', icon: Home },
                     { name: 'Gestión de Usuarios', path: '/usuarios', icon: Users },
@@ -36,6 +36,7 @@ export default function Layout() {
                     { name: 'Generar Constancias', path: '/constancias', icon: FileText },
                 ];
 
+            case 'director':
             case 'subdirector':
                 return [
                     { name: 'Panel de Control', path: '/dashboard', icon: Home },
@@ -44,38 +45,37 @@ export default function Layout() {
                     { name: 'Consultar Tutorados', path: '/consultar-tutorados', icon: Users },
                 ];
 
-            case 'jefe_depto_academico':
+            case 'jefe_departamento_academico':
                 return [
                     { name: 'Panel de Control', path: '/dashboard', icon: Home },
-                    // CU03
                     { name: 'Asignar Tutores', path: '/asignar-tutores', icon: Users },
-                    // CU11, CU12
                     { name: 'Consultar Tutores', path: '/consultar-tutores', icon: Users },
                     { name: 'Consultar Tutorados', path: '/consultar-tutorados', icon: Users },
                 ];
 
-            case 'coordinador_pt': // Coordinador Institucional
+            case 'coordinador_institucional_pt': // Coordinador Institucional
                 return [
                     { name: 'Panel de Control', path: '/dashboard', icon: Home },
-                    // CU01, CU02
                     { name: 'Gestión de Usuarios', path: '/usuarios', icon: Users },
                     { name: 'Programa de Tutorías', path: '/programa-tutorias', icon: Calendar },
-                    // CU03, CU04
-                    { name: 'Asignar Tutores', path: '/asignar-tutores', icon: Users },
-                    { name: 'Asignar Tutorados', path: '/asignar-tutorados', icon: Users },
-                    // CU11, CU12
+                    { name: 'Generar Constancias', path: '/constancias', icon: FileText },
                     { name: 'Consultar Tutores', path: '/consultar-tutores', icon: Users },
                     { name: 'Consultar Tutorados', path: '/consultar-tutorados', icon: Users },
                 ];
 
-            case 'coordinador_dep_ac_pt': // Coordinador Departamental
+            case 'coordinador_departamento_academico': // Coordinador Departamental
                 return [
                     { name: 'Panel de Control', path: '/dashboard', icon: Home },
-                    // CU04
+                    { name: 'Gestión de Usuarios', path: '/usuarios', icon: Users },
                     { name: 'Asignar Tutorados', path: '/asignar-tutorados', icon: Users },
-                    // CU10
-                    { name: 'Generar Constancias', path: '/constancias', icon: FileText },
-                    // CU11, CU12
+                    { name: 'Consultar Tutores', path: '/consultar-tutores', icon: Users },
+                    { name: 'Consultar Tutorados', path: '/consultar-tutorados', icon: Users },
+                ];
+
+            case 'jefe_departamento_desarrollo_academico': // Jefe de Desarrollo Académico
+                return [
+                    { name: 'Panel de Control', path: '/dashboard', icon: Home },
+                    { name: 'Gestión de Usuarios', path: '/usuarios', icon: Users },
                     { name: 'Consultar Tutores', path: '/consultar-tutores', icon: Users },
                     { name: 'Consultar Tutorados', path: '/consultar-tutorados', icon: Users },
                 ];
@@ -96,7 +96,7 @@ export default function Layout() {
             case 'tutorado':
                 return [
                     { name: 'Panel de Control', path: '/dashboard', icon: Home },
-                    // CU07
+                    // CU07 – Subir evidencias
                     { name: 'Subir Evidencias', path: '/evidencias', icon: Upload },
                 ];
 
@@ -114,7 +114,7 @@ export default function Layout() {
                 <div className="p-6 border-b border-blue-900/50">
                     <h1 className="text-xl font-bold tracking-wider">TECNM Tutorías</h1>
                     <p className="text-sm text-blue-200 mt-1 capitalize">
-                        {user?.rol === 'director' ? 'Administrador' : user?.rol?.replace(/_/g, ' ')}
+                        {(user?.rol?.toLowerCase() === 'administrador') ? 'Administrador' : user?.rol?.replace(/_/g, ' ')}
                     </p>
                 </div>
 

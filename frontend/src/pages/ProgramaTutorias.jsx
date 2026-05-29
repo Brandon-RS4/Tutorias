@@ -17,6 +17,11 @@ export default function ProgramaTutorias() {
         fecha_realizacion: ''
     });
 
+    // Estado para las listas inferiores
+    const [actividades, setActividades] = useState([]);
+    const [grupos, setGrupos] = useState([]);
+    const [cargandoDatos, setCargandoDatos] = useState(false);
+
     // Estado para crear un nuevo Plan (Por si no hay ninguno)
     const [mostrarNuevoPlan, setMostrarNuevoPlan] = useState(false);
     const [planData, setPlanData] = useState({
@@ -31,10 +36,27 @@ export default function ProgramaTutorias() {
             const res = await api.get('/tutorias/planes');
             setPlanes(res.data.data.planes);
             if (res.data.data.planes.length > 0 && !planSeleccionado) {
-                setPlanSeleccionado(res.data.data.planes[0]._id);
+                setPlanSeleccionado(res.data.data.planes[0].id);
             }
         } catch (err) {
             console.error('Error al cargar planes:', err);
+        }
+    };
+
+    const cargarDatosPlan = async (planId) => {
+        if (!planId) return;
+        setCargandoDatos(true);
+        try {
+            const [resActs, resGrupos] = await Promise.all([
+                api.get(`/tutorias/planes/${planId}/actividades`),
+                api.get(`/tutorias/grupos?plan_tutoria_id=${planId}`)
+            ]);
+            setActividades(resActs.data.data.actividades || []);
+            setGrupos(resGrupos.data.data.grupos || []);
+        } catch (err) {
+            console.error('Error al cargar datos del plan:', err);
+        } finally {
+            setCargandoDatos(false);
         }
     };
 
@@ -42,12 +64,18 @@ export default function ProgramaTutorias() {
         cargarPlanes();
     }, []);
 
+    useEffect(() => {
+        if (planSeleccionado) {
+            cargarDatosPlan(planSeleccionado);
+        }
+    }, [planSeleccionado]);
+
     const handleCrearPlan = async (e) => {
         e.preventDefault();
         try {
             const payload = {
                 ...planData,
-                departamento: user?.departamento?._id || user?.departamento
+                departamento_id: user?.departamento_id || null
             };
             const res = await api.post('/tutorias/planes', payload);
             
@@ -99,6 +127,8 @@ export default function ProgramaTutorias() {
                 instrucciones: '',
                 fecha_realizacion: ''
             });
+            // Recargar lista de actividades
+            cargarDatosPlan(planSeleccionado);
         } catch (err) {
             Swal.fire({
                 title: 'Error',
@@ -109,7 +139,7 @@ export default function ProgramaTutorias() {
         }
     };
 
-    const planActual = planes.find(p => p._id === planSeleccionado);
+    const planActual = planes.find(p => p.id === planSeleccionado);
 
     return (
         <div className="max-w-4xl mx-auto pb-10">
@@ -165,7 +195,7 @@ export default function ProgramaTutorias() {
                         >
                             <option value="" disabled>Selecciona un plan vigente</option>
                             {planes.map(plan => (
-                                <option key={plan._id} value={plan._id}>
+                                <option key={plan.id} value={plan.id}>
                                     {plan.nombre} ({plan.semestre}) - Estado: {plan.estado}
                                 </option>
                             ))}
@@ -232,6 +262,74 @@ export default function ProgramaTutorias() {
                     </div>
                 </form>
             </div>
+
+            {/* Listados Informativos del Plan Seleccionado */}
+            {planSeleccionado && (
+                <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <h3 className="text-xl font-bold text-[#0B2B54] mb-6 border-b pb-2">Información del Programa: {planActual?.nombre}</h3>
+                    
+                    {cargandoDatos ? (
+                        <div className="text-center py-6 text-gray-500">Cargando información...</div>
+                    ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            
+                            {/* Actividades */}
+                            <div>
+                                <h4 className="text-md font-bold text-gray-700 mb-3 bg-gray-50 p-2 rounded flex items-center justify-between">
+                                    <span>Actividades Registradas</span>
+                                    <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">{actividades.length}</span>
+                                </h4>
+                                {actividades.length === 0 ? (
+                                    <p className="text-sm text-gray-500 italic p-4 border border-dashed rounded text-center">No hay actividades en este plan.</p>
+                                ) : (
+                                    <ul className="space-y-3">
+                                        {actividades.map(act => (
+                                            <li key={act.id} className="border p-3 rounded-lg hover:shadow-sm transition-shadow">
+                                                <div className="flex justify-between items-start">
+                                                    <span className="font-bold text-[#0B2B54] text-sm">#{act.no_actividad} {act.nombre}</span>
+                                                    <span className="text-xs bg-gray-100 px-2 py-1 rounded text-gray-600 font-mono">
+                                                        {new Date(act.fecha_realizacion).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <p className="text-xs text-gray-500 mt-2 line-clamp-2">{act.instrucciones}</p>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+
+                            {/* Grupos y Tutores */}
+                            <div>
+                                <h4 className="text-md font-bold text-gray-700 mb-3 bg-gray-50 p-2 rounded flex items-center justify-between">
+                                    <span>Grupos Asignados</span>
+                                    <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full">{grupos.length}</span>
+                                </h4>
+                                {grupos.length === 0 ? (
+                                    <p className="text-sm text-gray-500 italic p-4 border border-dashed rounded text-center">No hay grupos asociados a este plan.</p>
+                                ) : (
+                                    <ul className="space-y-3">
+                                        {grupos.map(g => (
+                                            <li key={g.id} className="border p-3 rounded-lg hover:shadow-sm transition-shadow flex items-center justify-between">
+                                                <div>
+                                                    <p className="font-bold text-[#0B2B54] text-sm">Grupo {g.clave_grupo}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">Horario: {g.horario}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-xs font-bold text-gray-700">Tutor:</p>
+                                                    <p className="text-xs text-gray-600 truncate max-w-[150px]" title={g.tutor?.nombre_completo}>
+                                                        {g.tutor?.nombre_completo || 'Sin tutor asignado'}
+                                                    </p>
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }

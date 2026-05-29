@@ -2,22 +2,12 @@
  * controllers/tutoria.controller.js
  * ─────────────────────────────────────────────────────────────────
  * CU02 – Asignar actividades del Programa de Tutorías → registrarActividad
- * CU05 – Capturar Asistencias                         → capturarAsistencias
- * CU09 – Modificar actividades de sesión              → modificarActividadSesion
- * CU10 – Generar formato de acreditación              → generarFormatoAcreditacion
+ * CU03 – Asignar a los Tutores                        → asignarTutor
+ * CU04 – Asignar Tutorados a los Tutores              → asignarTutorado
  * ─────────────────────────────────────────────────────────────────
  */
 
-const {
-  PlanTutoria,
-  Actividad,
-  Grupo,
-  Sesion,
-  Asistencia,
-  Tutorado,
-  FormatoAcreditacion,
-  Evidencia,
-} = require('../models');
+const { supabase } = require('../config/supabase');
 
 // ═══════════════════════════════════════════════════════════════
 //  CU02 – Asignar actividades del Programa de Tutorías
@@ -37,12 +27,17 @@ const registrarActividad = async (req, res, next) => {
       });
     }
 
-    const plan = await PlanTutoria.findById(planId);
-    if (!plan) {
+    const { data: plan, error: planError } = await supabase
+      .from('planes_tutoria')
+      .select('*')
+      .eq('id', planId)
+      .single();
+
+    if (planError || !plan) {
       return res.status(404).json({ success: false, message: 'Plan de tutoría no encontrado.' });
     }
 
-    // A2. Validar que el plan esté activo (periodo académico vigente)
+    // A2. Validar que el plan esté activo
     if (plan.estado !== 'activo') {
       return res.status(409).json({
         success: false,
@@ -52,7 +47,10 @@ const registrarActividad = async (req, res, next) => {
 
     // A2. Validar que la fecha ingresada corresponda al periodo académico vigente
     const fechaRealizacionDate = new Date(fecha_realizacion);
-    if (fechaRealizacionDate < plan.fecha_ini || fechaRealizacionDate > plan.fecha_fin) {
+    const fechaIni = new Date(plan.fecha_ini);
+    const fechaFin = new Date(plan.fecha_fin);
+
+    if (fechaRealizacionDate < fechaIni || fechaRealizacionDate > fechaFin) {
       return res.status(400).json({
         success: false,
         message: 'La fecha de realización ingresada está fuera del periodo académico del plan.',
@@ -60,50 +58,234 @@ const registrarActividad = async (req, res, next) => {
     }
 
     // Crear la actividad
-    const actividad = await Actividad.create({
-      no_actividad,
-      nombre,
-      instrucciones,
-      fecha_realizacion,
-      plan_tutoria: planId,
-    });
+    const { data: actividad, error: actividadError } = await supabase
+      .from('actividades')
+      .insert([{
+        no_actividad,
+        nombre,
+        instrucciones,
+        fecha_realizacion,
+        plan_tutoria_id: planId
+      }])
+      .select()
+      .single();
 
-    // Agregar referencia al plan (composición)
-    plan.actividades.push(actividad._id);
-    await plan.save();
+    if (actividadError) {
+      return res.status(400).json({ success: false, message: actividadError.message });
+    }
 
     res.status(201).json({
-      success : true,
-      message : 'Actividad registrada exitosamente.',
-      data    : { actividad },
+      success: true,
+      message: 'Actividad registrada exitosamente.',
+      data: { actividad },
     });
   } catch (err) {
     next(err);
   }
 };
 
+// ── Listar Actividades de un Plan ──────────────────────────────────
+const listarActividadesPorPlan = async (req, res, next) => {
+  try {
+    const { planId } = req.params;
+
+    const { data: actividades, error } = await supabase
+      .from('actividades')
+      .select('*')
+      .eq('plan_tutoria_id', planId)
+      .order('no_actividad', { ascending: true });
+
+    if (error) return res.status(400).json({ success: false, message: error.message });
+
+    res.status(200).json({ success: true, data: { total: actividades.length, actividades } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  CU03 – Asignar a los Tutores
+//  Actor: Coordinador Institucional de Tutorías
+//  POST /api/tutorias/tutores/asignar
+// ═══════════════════════════════════════════════════════════════
+const asignarTutor = async (req, res, next) => {
+  try {
+    const { tutor_id, grupo_id } = req.body;
+
+    if (!tutor_id || !grupo_id) {
+      return res.status(400).json({ success: false, message: 'Se requieren tutor_id y grupo_id.' });
+    }
+
+    // Verificar tutor
+    const { data: tutor, error: tutorError } = await supabase
+      .from('tutores')
+      .select('*, usuarios!inner(activo)')
+      .eq('usuario_id', tutor_id)
+      .single();
+
+    if (tutorError || !tutor) {
+      return res.status(404).json({ success: false, message: 'Tutor no encontrado.' });
+    }
+
+    if (!tutor.usuarios.activo) {
+      return res.status(409).json({ success: false, message: 'El tutor seleccionado no está activo.' });
+    }
+
+    // Verificar grupo
+    const { data: grupo, error: grupoError } = await supabase
+      .from('grupos')
+      .select('*')
+      .eq('id', grupo_id)
+      .single();
+
+    if (grupoError || !grupo) {
+      return res.status(404).json({ success: false, message: 'Grupo no encontrado.' });
+    }
+
+    // Conflicto: grupo ya tiene tutor diferente
+    if (grupo.tutor_id && grupo.tutor_id !== tutor_id) {
+      return res.status(409).json({ success: false, message: 'El grupo ya tiene un tutor asignado.' });
+    }
+
+    // Conflicto de horario
+    const { data: grupoExistente } = await supabase
+      .from('grupos')
+      .select('clave_grupo')
+      .eq('tutor_id', tutor_id)
+      .eq('horario', grupo.horario)
+      .neq('id', grupo_id)
+      .single();
+
+    if (grupoExistente) {
+      return res.status(409).json({ success: false, message: `Conflicto de horario con el grupo ${grupoExistente.clave_grupo}.` });
+    }
+
+    // Asignar
+    const { error: updateError } = await supabase
+      .from('grupos')
+      .update({ tutor_id })
+      .eq('id', grupo_id);
+
+    if (updateError) {
+      return res.status(400).json({ success: false, message: updateError.message });
+    }
+
+    res.status(200).json({ success: true, message: 'Tutor asignado exitosamente al grupo.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════
+//  CU04 – Asignar Tutorados a los Tutores
+//  POST /api/tutorias/tutorados/asignar
+// ═══════════════════════════════════════════════════════════════
+const asignarTutorado = async (req, res, next) => {
+  try {
+    const { tutorado_id, tutor_id } = req.body;
+
+    if (!tutorado_id || !tutor_id) {
+      return res.status(400).json({ success: false, message: 'Se requieren tutorado_id y tutor_id.' });
+    }
+
+    // Verificar tutorado
+    const { data: tutorado, error: tutoradoError } = await supabase
+      .from('tutorados')
+      .select('*')
+      .eq('usuario_id', tutorado_id)
+      .single();
+
+    if (tutoradoError || !tutorado) {
+      return res.status(404).json({ success: false, message: 'Tutorado no encontrado.' });
+    }
+
+    // Verificar tutor
+    const { data: tutor, error: tutorError } = await supabase
+      .from('tutores')
+      .select('*, usuarios!inner(activo)')
+      .eq('usuario_id', tutor_id)
+      .single();
+
+    if (tutorError || !tutor) {
+      return res.status(404).json({ success: false, message: 'Tutor no encontrado.' });
+    }
+
+    if (!tutor.usuarios.activo) {
+      return res.status(409).json({ success: false, message: 'El tutor seleccionado no está activo.' });
+    }
+
+    // Límite de tutorados
+    const { count } = await supabase
+      .from('tutorados')
+      .select('*', { count: 'exact', head: true })
+      .eq('tutor_id', tutor_id);
+
+    if (count >= tutor.max_tutorados) {
+      return res.status(409).json({ success: false, message: `El tutor alcanzó el límite de ${tutor.max_tutorados} tutorados.` });
+    }
+
+    // Ya asignado a otro
+    if (tutorado.tutor_id && tutorado.tutor_id !== tutor_id) {
+      return res.status(409).json({ success: false, message: 'El tutorado ya está asignado a otro tutor.' });
+    }
+
+    // Asignar
+    const { error: updateError } = await supabase
+      .from('tutorados')
+      .update({ tutor_id })
+      .eq('usuario_id', tutorado_id);
+
+    if (updateError) {
+      return res.status(400).json({ success: false, message: updateError.message });
+    }
+
+    // Opcionalmente agregarlo al grupo si existe uno
+    const { data: grupos } = await supabase
+      .from('grupos')
+      .select('id')
+      .eq('tutor_id', tutor_id)
+      .limit(1);
+
+    if (grupos && grupos.length > 0) {
+      await supabase
+        .from('grupo_tutorados')
+        .insert([{ grupo_id: grupos[0].id, tutorado_id }]);
+    }
+
+    res.status(200).json({ success: true, message: 'Tutorado asignado exitosamente al tutor.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── Crear un Plan de Tutoría ──────────────────────────────────────
-//  POST /api/tutorias/planes
 const crearPlanTutoria = async (req, res, next) => {
   try {
-    const { nombre, semestre, fecha_ini, fecha_fin, departamento } = req.body;
+    const { nombre, semestre, fecha_ini, fecha_fin, coordinador_pt_id } = req.body;
+    const deptoId = req.body.departamento_id || req.body.departamento || null;
 
-    if (!nombre || !semestre || !fecha_ini || !fecha_fin || !departamento) {
+    if (!nombre || !semestre || !fecha_ini || !fecha_fin) {
       return res.status(400).json({
         success: false,
-        message: 'Campos obligatorios: nombre, semestre, fecha_ini, fecha_fin, departamento.',
+        message: 'Campos obligatorios: nombre, semestre, fecha_ini, fecha_fin.',
       });
     }
 
-    const plan = await PlanTutoria.create({
-      nombre,
-      semestre,
-      fecha_ini,
-      fecha_fin,
-      departamento,
-      coordinador_pt: req.usuario._id,
-      estado: 'activo',
-    });
+    const { data: plan, error } = await supabase
+      .from('planes_tutoria')
+      .insert([{
+        nombre,
+        semestre,
+        fecha_ini,
+        fecha_fin,
+        departamento_id: deptoId,
+        coordinador_pt_id,
+        estado: 'activo',
+      }])
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ success: false, message: error.message });
 
     res.status(201).json({ success: true, message: 'Plan de tutoría creado.', data: { plan } });
   } catch (err) {
@@ -112,18 +294,22 @@ const crearPlanTutoria = async (req, res, next) => {
 };
 
 // ── Listar planes de tutoría ──────────────────────────────────────
-//  GET /api/tutorias/planes
 const listarPlanes = async (req, res, next) => {
   try {
-    const { departamento, estado } = req.query;
-    const filtro = {};
-    if (departamento) filtro.departamento = departamento;
-    if (estado)       filtro.estado       = estado;
+    const { departamento_id, estado } = req.query;
+    
+    let query = supabase.from('planes_tutoria').select(`
+      *,
+      departamentos_academicos(nombre),
+      usuarios(nombre_completo)
+    `);
 
-    const planes = await PlanTutoria.find(filtro)
-      .populate('departamento', 'nom_dep')
-      .populate('coordinador_pt', 'nombre_completo')
-      .lean();
+    if (departamento_id) query = query.eq('departamento_id', departamento_id);
+    if (estado) query = query.eq('estado', estado);
+
+    const { data: planes, error } = await query;
+
+    if (error) return res.status(400).json({ success: false, message: error.message });
 
     res.status(200).json({ success: true, data: { total: planes.length, planes } });
   } catch (err) {
@@ -131,26 +317,25 @@ const listarPlanes = async (req, res, next) => {
   }
 };
 
-// ── Crear grupo (necesario para CU03) ────────────────────────────
-//  POST /api/tutorias/grupos
+// ── Crear grupo ───────────────────────────────────────────────────
 const crearGrupo = async (req, res, next) => {
   try {
-    const { clave_grupo, horario, plan_tutoria } = req.body;
+    const { clave_grupo, horario, plan_tutoria_id } = req.body;
 
-    if (!clave_grupo || !horario || !plan_tutoria) {
+    if (!clave_grupo || !horario || !plan_tutoria_id) {
       return res.status(400).json({
         success: false,
-        message: 'Campos obligatorios: clave_grupo, horario, plan_tutoria.',
+        message: 'Campos obligatorios: clave_grupo, horario, plan_tutoria_id.',
       });
     }
 
-    // El tutor se asignará en CU03; aquí el grupo nace sin tutor
-    const grupo = await Grupo.create({
-      clave_grupo,
-      horario,
-      plan_tutoria,
-      cantidad: 0,
-    });
+    const { data: grupo, error } = await supabase
+      .from('grupos')
+      .insert([{ clave_grupo, horario, plan_tutoria_id, cantidad: 0 }])
+      .select()
+      .single();
+
+    if (error) return res.status(400).json({ success: false, message: error.message });
 
     res.status(201).json({ success: true, message: 'Grupo creado.', data: { grupo } });
   } catch (err) {
@@ -159,374 +344,38 @@ const crearGrupo = async (req, res, next) => {
 };
 
 // ── Listar Grupos ─────────────────────────────────────────────────
-//  GET /api/tutorias/grupos
 const listarGrupos = async (req, res, next) => {
   try {
-    const { plan_tutoria } = req.query;
-    const filtro = {};
-    if (plan_tutoria) filtro.plan_tutoria = plan_tutoria;
+    const { plan_tutoria_id } = req.query;
+    let query = supabase.from('grupos').select(`
+      *,
+      planes_tutoria(nombre, semestre),
+      tutores(usuarios(nombre_completo, correo))
+    `);
 
-    const grupos = await Grupo.find(filtro)
-      .populate('plan_tutoria', 'nombre semestre')
-      .populate('tutor', 'nombre_completo correo')
-      .lean();
+    if (plan_tutoria_id) query = query.eq('plan_tutoria_id', plan_tutoria_id);
 
-    res.status(200).json({ success: true, data: { total: grupos.length, grupos } });
-  } catch (err) {
-    next(err);
-  }
-};
+    const { data: grupos, error } = await query;
 
-// ═══════════════════════════════════════════════════════════════
-//  CU05 – Capturar Asistencias
-//  Actor: Tutor
-//  POST /api/tutorias/sesiones/:sesionId/asistencias
-// ═══════════════════════════════════════════════════════════════
-const capturarAsistencias = async (req, res, next) => {
-  try {
-    const { sesionId } = req.params;
-    // asistencias: [{ tutorado_id, asistencia: true/false, observacion }]
-    const { asistencias } = req.body;
+    if (error) return res.status(400).json({ success: false, message: error.message });
 
-    if (!asistencias || !Array.isArray(asistencias) || asistencias.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Se requiere un arreglo "asistencias" con al menos un registro.',
-      });
-    }
-
-    const sesion = await Sesion.findById(sesionId).populate('plan_tutoria', 'estado');
-    if (!sesion) {
-      return res.status(404).json({ success: false, message: 'Sesión no encontrada.' });
-    }
-
-    // A1. Sesión cancelada
-    if (sesion.estado === 'cancelada') {
-      return res.status(409).json({
-        success: false,
-        message: 'No se puede registrar asistencia en una sesión cancelada.',
-      });
-    }
-
-    // A2. Sesión no pertenece a un PAT activo
-    if (!sesion.plan_tutoria || sesion.plan_tutoria.estado !== 'activo') {
-      return res.status(409).json({
-        success: false,
-        message: 'La sesión no pertenece a un PAT activo.',
-      });
-    }
-
-    // Verificar que quien captura es el tutor dueño del grupo
-    const grupo = await Grupo.findById(sesion.grupo);
-    if (!grupo || grupo.tutor.toString() !== req.usuario._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Solo el tutor asignado al grupo puede capturar asistencias.',
-      });
-    }
-
-    // Insertar o actualizar registros de asistencia (upsert)
-    const operaciones = asistencias.map(({ tutorado_id, asistencia, observacion }) => ({
-      updateOne: {
-        filter: { tutorado: tutorado_id, sesion: sesionId },
-        update: {
-          $set: {
-            asistencia,
-            observacion: observacion || '',
-            tutor: req.usuario._id,
-          },
-        },
-        upsert: true,
-      },
-    }));
-
-    await Asistencia.bulkWrite(operaciones);
-
-    // Calcular porcentaje de asistencia por tutorado (todas las sesiones del grupo)
-    const totalSesiones = await Sesion.countDocuments({
-      grupo: sesion.grupo,
-      estado: { $ne: 'cancelada' },
+    const gruposMapeados = (grupos || []).map(g => {
+      let tutorObj = null;
+      if (g.tutores && g.tutores.usuarios) {
+        tutorObj = {
+          nombre_completo: g.tutores.usuarios.nombre_completo,
+          correo: g.tutores.usuarios.correo
+        };
+      }
+      const { tutores, ...grupoRest } = g;
+      return {
+        ...grupoRest,
+        tutor_id: g.tutor_id,   // asegurar que tutor_id esté presente
+        tutor: tutorObj
+      };
     });
 
-    const resumen = await Promise.all(
-      asistencias.map(async ({ tutorado_id }) => {
-        const presencias = await Asistencia.countDocuments({
-          tutorado: tutorado_id,
-          sesion: { $in: await Sesion.find({ grupo: sesion.grupo }).distinct('_id') },
-          asistencia: true,
-        });
-        const porcentaje = totalSesiones > 0
-          ? Math.round((presencias / totalSesiones) * 100)
-          : 0;
-        return { tutorado_id, porcentaje_asistencia: porcentaje };
-      })
-    );
-
-    // Marcar sesión como realizada si estaba programada
-    if (sesion.estado === 'programada') {
-      sesion.estado = 'realizada';
-      await sesion.save();
-    }
-
-    res.status(200).json({
-      success : true,
-      message : 'Asistencias capturadas exitosamente.',
-      data    : { sesion_id: sesionId, resumen_asistencia: resumen },
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── Listar sesiones de un grupo ───────────────────────────────────
-//  GET /api/tutorias/grupos/:grupoId/sesiones
-const listarSesionesPorGrupo = async (req, res, next) => {
-  try {
-    const sesiones = await Sesion.find({ grupo: req.params.grupoId })
-      .populate('actividades', 'nombre no_actividad')
-      .sort({ no_sesion: 1 })
-      .lean();
-
-    res.status(200).json({ success: true, data: { total: sesiones.length, sesiones } });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── Crear sesión ──────────────────────────────────────────────────
-//  POST /api/tutorias/grupos/:grupoId/sesiones
-const crearSesion = async (req, res, next) => {
-  try {
-    const { no_sesion, fecha, hora, actividades, observaciones } = req.body;
-    const { grupoId } = req.params;
-
-    if (!no_sesion || !fecha || !hora) {
-      return res.status(400).json({
-        success: false,
-        message: 'Campos obligatorios: no_sesion, fecha, hora.',
-      });
-    }
-
-    const grupo = await Grupo.findById(grupoId);
-    if (!grupo) {
-      return res.status(404).json({ success: false, message: 'Grupo no encontrado.' });
-    }
-
-    const sesion = await Sesion.create({
-      no_sesion,
-      fecha,
-      hora,
-      grupo : grupoId,
-      plan_tutoria: grupo.plan_tutoria,
-      actividades : actividades || [],
-      observaciones,
-    });
-
-    res.status(201).json({ success: true, message: 'Sesión creada.', data: { sesion } });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ═══════════════════════════════════════════════════════════════
-//  CU09 – Modificar actividades propuestas para las sesiones
-//  Actor: Tutor
-//  PUT /api/tutorias/sesiones/:sesionId/actividades/:actividadId
-// ═══════════════════════════════════════════════════════════════
-const modificarActividadSesion = async (req, res, next) => {
-  try {
-    const { sesionId, actividadId } = req.params;
-    const { nombre, instrucciones } = req.body;
-
-    const sesion = await Sesion.findById(sesionId).populate('plan_tutoria', 'estado');
-    if (!sesion) {
-      return res.status(404).json({ success: false, message: 'Sesión no encontrada.' });
-    }
-
-    // A2. PAT no activo
-    if (!sesion.plan_tutoria || sesion.plan_tutoria.estado !== 'activo') {
-      return res.status(409).json({
-        success: false,
-        message: 'La sesión no pertenece a un PAT activo.',
-      });
-    }
-
-    // A3. Sesión no editable (cerrada/cancelada/realizada)
-    if (['cancelada', 'realizada'].includes(sesion.estado)) {
-      return res.status(409).json({
-        success: false,
-        message: `No se puede modificar una sesión en estado '${sesion.estado}'.`,
-      });
-    }
-
-    // A1. Verificar que la actividad esté asociada a la sesión
-    if (!sesion.actividades.map(String).includes(actividadId)) {
-      return res.status(404).json({
-        success: false,
-        message: 'La actividad no está asociada a esta sesión.',
-      });
-    }
-
-    // A2. Datos inválidos
-    if (!nombre && !instrucciones) {
-      return res.status(400).json({
-        success: false,
-        message: 'Debe proporcionar al menos un campo a modificar: nombre o instrucciones.',
-      });
-    }
-
-    const camposActualizar = {};
-    if (nombre)        camposActualizar.nombre        = nombre;
-    if (instrucciones) camposActualizar.instrucciones = instrucciones;
-
-    const actividad = await Actividad.findByIdAndUpdate(
-      actividadId,
-      { $set: camposActualizar },
-      { new: true, runValidators: true }
-    );
-
-    if (!actividad) {
-      return res.status(404).json({ success: false, message: 'Actividad no encontrada.' });
-    }
-
-    res.status(200).json({
-      success : true,
-      message : 'Actividad actualizada exitosamente.',
-      data    : { actividad },
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ═══════════════════════════════════════════════════════════════
-//  CU10 – Generar formato de acreditación
-//  Actor: Coordinador Departamental
-//  POST /api/tutorias/acreditacion/:tutoradoId/plan/:planId
-// ═══════════════════════════════════════════════════════════════
-const generarFormatoAcreditacion = async (req, res, next) => {
-  try {
-    const { tutoradoId, planId } = req.params;
-
-    const tutorado = await Tutorado.findById(tutoradoId);
-    if (!tutorado) {
-      return res.status(404).json({ success: false, message: 'Tutorado no encontrado.' });
-    }
-
-    const plan = await PlanTutoria.findById(planId);
-    if (!plan) {
-      return res.status(404).json({ success: false, message: 'Plan de tutoría no encontrado.' });
-    }
-
-    // ── Calcular asistencia ───────────────────────────────────────
-    // Obtener todas las sesiones del tutor del tutorado en ese plan
-    const tutor = tutorado.tutor;
-    const grupo = await Grupo.findOne({ tutor, plan_tutoria: planId });
-
-    if (!grupo) {
-      return res.status(409).json({
-        success: false,
-        message: 'No se encontró grupo asociado al tutorado en este plan.',
-      });
-    }
-
-    const sesionesDelGrupo = await Sesion.find({
-      grupo: grupo._id,
-      estado: { $ne: 'cancelada' },
-    }).select('_id');
-
-    const idsSesiones = sesionesDelGrupo.map((s) => s._id);
-    const totalSesiones = idsSesiones.length;
-
-    const asistenciasPresente = await Asistencia.find({
-      tutorado: tutoradoId,
-      sesion  : { $in: idsSesiones },
-      asistencia: true,
-    });
-
-    const porcentaje = totalSesiones > 0
-      ? Math.round((asistenciasPresente.length / totalSesiones) * 100)
-      : 0;
-
-    // Umbral de asistencia mínima configurable (default 80%)
-    const UMBRAL_ASISTENCIA = parseInt(process.env.UMBRAL_ASISTENCIA_PCT || '80', 10);
-
-    // ── Validar evidencias: deben estar todas evaluadas ───────────
-    const evidenciasPendientes = await Evidencia.countDocuments({
-      tutorado: tutoradoId,
-      estado  : { $in: ['pendiente', 'reenvio'] },
-    });
-
-    // A1. Alumno no acreditado
-    if (porcentaje < UMBRAL_ASISTENCIA || evidenciasPendientes > 0) {
-      return res.status(409).json({
-        success: false,
-        message: 'El alumno no cumple los requisitos de acreditación.',
-        data   : {
-          porcentaje_asistencia : porcentaje,
-          umbral_requerido      : UMBRAL_ASISTENCIA,
-          evidencias_pendientes : evidenciasPendientes,
-        },
-      });
-    }
-
-    // Obtener calificación final del expediente del tutorado
-    const formatoExistente = await FormatoAcreditacion.findOne({
-      tutorado    : tutoradoId,
-      plan_tutoria: planId,
-    });
-    if (formatoExistente) {
-      return res.status(409).json({
-        success: false,
-        message: 'Ya existe una constancia de acreditación para este tutorado en este periodo.',
-        data   : { formato: formatoExistente },
-      });
-    }
-
-    // Crear el formato de acreditación
-    const formato = await FormatoAcreditacion.create({
-      fecha                   : new Date(),
-      acreditado              : true,
-      tutorado                : tutoradoId,
-      coordinador_dep_ac_pt   : req.usuario._id,
-      plan_tutoria            : planId,
-      asistencias             : asistenciasPresente.map((a) => a._id),
-      porcentaje_asistencia   : porcentaje,
-    });
-
-    res.status(201).json({
-      success : true,
-      message : 'Formato de acreditación generado exitosamente.',
-      data    : {
-        formato,
-        tutorado: {
-          _id             : tutorado._id,
-          nombre_completo : tutorado.nombre_completo,
-          num_control     : tutorado.num_control_tutorado,
-        },
-        resumen: { porcentaje_asistencia: porcentaje, evidencias_pendientes: evidenciasPendientes },
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
-// ── Obtener un formato de acreditación ───────────────────────────
-//  GET /api/tutorias/acreditacion/:formatoId
-const obtenerFormatoAcreditacion = async (req, res, next) => {
-  try {
-    const formato = await FormatoAcreditacion.findById(req.params.formatoId)
-      .populate('tutorado', 'nombre_completo num_control_tutorado')
-      .populate('coordinador_dep_ac_pt', 'nombre_completo')
-      .populate('plan_tutoria', 'nombre semestre')
-      .lean();
-
-    if (!formato) {
-      return res.status(404).json({ success: false, message: 'Formato no encontrado.' });
-    }
-
-    res.status(200).json({ success: true, data: { formato } });
+    res.status(200).json({ success: true, data: { total: gruposMapeados.length, grupos: gruposMapeados } });
   } catch (err) {
     next(err);
   }
@@ -534,14 +383,11 @@ const obtenerFormatoAcreditacion = async (req, res, next) => {
 
 module.exports = {
   registrarActividad,
+  asignarTutor,
+  asignarTutorado,
   crearPlanTutoria,
   listarPlanes,
   crearGrupo,
   listarGrupos,
-  capturarAsistencias,
-  listarSesionesPorGrupo,
-  crearSesion,
-  modificarActividadSesion,
-  generarFormatoAcreditacion,
-  obtenerFormatoAcreditacion,
+  listarActividadesPorPlan,
 };

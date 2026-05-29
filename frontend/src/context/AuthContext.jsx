@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('token', token);
             localStorage.setItem('user', JSON.stringify(usuario));
             setUser(usuario);
-            return { success: true };
+            return { success: true, primer_inicio_sesion: usuario.primer_inicio_sesion };
         } catch (error) {
             return {
                 success: false,

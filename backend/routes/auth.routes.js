@@ -3,7 +3,7 @@
  */
 
 const router = require('express').Router();
-const { login, getMe, logout } = require('../controllers/auth.controller');
+const { login, getMe, logout, cambiarContrasenaInicial } = require('../controllers/auth.controller');
 const { protect }              = require('../middlewares/auth.middleware');
 
 // POST /api/auth/login
@@ -14,5 +14,8 @@ router.get('/me', protect, getMe);
 
 // POST /api/auth/logout
 router.post('/logout', protect, logout);
+
+// POST /api/auth/cambiar-contrasena-inicial
+router.post('/cambiar-contrasena-inicial', cambiarContrasenaInicial);
 
 module.exports = router;
