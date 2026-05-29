@@ -3,7 +3,7 @@
 Este es el repositorio completo del **Sistema de Gestión de Tutorías**, una aplicación web diseñada para administrar los planes de tutoría, asignación de tutores y tutorados, registro de asistencias, subida y evaluación de evidencias, y generación de reportes de acreditación.
 
 El sistema se divide en dos partes principales:
-- **Backend**: API RESTful construida con Node.js, Express y MongoDB.
+- **Backend**: API RESTful construida con Node.js, Express y Supabase (PostgreSQL).
 - **Frontend**: Aplicación SPA construida con React, Vite y TailwindCSS.
 
 ---
@@ -13,7 +13,7 @@ El sistema se divide en dos partes principales:
 Para ejecutar este proyecto en tu computadora o en otro equipo, asegúrate de tener instalado:
 
 1. **[Node.js](https://nodejs.org/es/)** (v18 o superior). Verifica tu versión con `node -v` y `npm -v`.
-2. **[MongoDB](https://www.mongodb.com/)** local o una cuenta en **MongoDB Atlas** (para base de datos en la nube).
+2. Un proyecto activo en **[Supabase](https://supabase.com/)** con base de datos PostgreSQL.
 3. **Git** (opcional, para clonar el repositorio).
 
 ---
@@ -47,8 +47,9 @@ Dentro de la carpeta `backend/`, busca o crea un archivo llamado `.env` y añade
 ```env
 PORT=5000
 NODE_ENV=development
-# URI de conexión a MongoDB. Cambia por la tuya si usas MongoDB Atlas o Local.
-MONGO_URI=mongodb+srv://<usuario>:<password>@cluster0.mongodb.net/tutorias_db?retryWrites=true&w=majority
+SUPABASE_URL=https://afpjhcmpghjzmfxitifg.supabase.co
+SUPABASE_ANON_KEY=tu-anon-key-de-supabase
+SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key-de-supabase
 JWT_SECRET=SECRETO_TUTORIAS_2026
 JWT_EXPIRES_IN=8h
 CLIENT_URL=http://localhost:5173
@@ -66,7 +67,7 @@ npm run dev
 # O si solo quieres iniciarlo de forma normal
 npm start
 ```
-*Si todo está correcto, verás un mensaje indicando: "Servidor corriendo en puerto 5000" y "Conectado a MongoDB".*
+*Si todo está correcto, verás un mensaje indicando: "Servidor corriendo en el puerto 5000" y que la conexión con Supabase es exitosa.*
 
 ### 3. Configuración del Frontend
 
